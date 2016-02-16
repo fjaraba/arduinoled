@@ -1,6 +1,8 @@
 # arduinoled
 
-## Fernando Jaraba Nieto. Febrero 2016
+## Fernando Jaraba Nieto (fjaraba@gamil.com).
+## Febrero 2016
+
 
 App nativa para Android que permite enviar comandos a una placa WIFI ESP8266 conectada a un Arduino.
 
