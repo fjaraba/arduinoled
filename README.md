@@ -1,6 +1,6 @@
 # arduinoled
 
-## Fernando Jaraba Nieto (fjaraba@gamil.com).
+## Fernando Jaraba Nieto (fjaraba@gmail.com).
 ## Febrero 2016
 
 
