@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+<PreferenceCategory
+    android:summary="IP y puerto"
+    android:title="Dirección IP y puerto de ESP8266-Arduino" >
+    <EditTextPreference
+        android:key="PREF_IP_ADDRESS"
+        android:defaultValue="192.168.0.10"
+        android:summary="Direccion IP obtenida de la placa ESP8266"
+        android:title="Dirección IP" />
+    <EditTextPreference
+        android:key="PREF_PORT_NUMBER"
+        android:defaultValue="80"
+        android:inputType="number"
+        android:summary="Puerto donde ha arrancado la placa ESP8266."
+        android:title="Puerto" />
+</PreferenceCategory>
+
+<PreferenceCategory
+    android:summary="Configuración local"
+    android:title="Configuración local" >
+
+    <EditTextPreference
+        android:key="PREF_MIN_PIN"
+        android:defaultValue="11"
+        android:inputType="number"
+        android:summary="Indica el número del primer PIN del Arduino."
+        android:title="Primer Pin" />
+
+    <EditTextPreference
+        android:key="PREF_LEDS"
+        android:defaultValue="3"
+        android:inputType="number"
+        android:summary="Indica el numero de leds a controlar."
+        android:title="Número de Leds" />
+
+    <CheckBoxPreference
+        android:key="PREF_MULTIPLE"
+        android:defaultValue="false"
+        android:summary="Permite realizar varias conexiones de manera simultánea."
+        android:title="Conexiones simultáneas" />
+</PreferenceCategory>
+</PreferenceScreen>

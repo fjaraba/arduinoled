@@ -14,67 +14,43 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="Wifi Arduino. Fernando Jaraba Nieto (2016)."
-            android:textSize="14dp" />
+            android:text="Wifi Arduino. Fernando Jaraba Nieto."
+            android:textSize="20dp" />
 
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cambiar configuración"
+            android:id="@+id/btn_conf"
+            android:clickable="true"
+            android:enabled="true"
+            android:capitalize="none"
+            android:elegantTextHeight="true"
+            android:contentDescription="Cambiar la configuración"
+            android:focusable="true" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="Dirección IP:"
-            android:id="@+id/textView" />
-
-        <EditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="e.g. 192.168.0.10"
-            android:id="@+id/editTextIPAddress" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Puerto:"
-            android:id="@+id/textView2" />
-
-        <EditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:ems="10"
-            android:hint="e.g. 80"
-            android:id="@+id/editTextPortNumber" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Número de leds:"
-            android:id="@+id/textView2" />
-
-        <EditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:ems="10"
-            android:hint="e.g. 3"
-            android:id="@+id/editTextLeds" />
-
+            android:text="Dirección remota:"
+            android:id="@+id/direccionRemota" />
 
 
         <LinearLayout
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:baselineAligned="false"
-            android:id="@+id/layout_fer">
+            android:id="@+id/layout_botones">
         </LinearLayout>
-
 
         <TextView
             android:layout_marginTop="20dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
+            android:text="info"
             android:id="@+id/info" />
 
     </LinearLayout>

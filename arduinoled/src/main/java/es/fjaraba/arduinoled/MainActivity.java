@@ -2,15 +2,19 @@ package es.fjaraba.arduinoled;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,77 +25,105 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /*
-    Fernando Jaraba Nieto. 2016
+    Fernando Jaraba Nieto. Febrero 2016
+
+    App que permite enviar comandos a una ESP8266 conectada a un Arduino.
+    La aplicación recibe información del estado del LED del Arduino y muestra una imagen indicándolo.
+    Tambien tiene incorpora una pantalla de configuración.
 
  */
 
 public class MainActivity extends Activity implements View.OnClickListener {
 
-    public final static String PREF_IP = "PREF_IP_ADDRESS";
-    public final static String PREF_PORT = "PREF_PORT_NUMBER";
-    public final static String PREF_LEDS = "PREF_LEDS";
+    public final static String PREF_IP       = "PREF_IP_ADDRESS";
+    public final static String PREF_PORT     = "PREF_PORT_NUMBER";
+    public final static String PREF_LEDS     = "PREF_LEDS";
+    public final static String PREF_MIN_PIN  = "PREF_MIN_PIN";
+    public final static String PREF_MULTIPLE = "PREF_MULTIPLE";
 
     public final static int MAX_LED = 20;
     public final static int BUTTON_INDEX = 2000;
 
-
-    public final static String LED_INICIAL = "11";
-    public final static String TOTAL_LEDS = "5";
-
-    // declare buttons and text inputs
-    private Button buttonPin11,buttonPin12,buttonPin13;
-    private EditText editTextIPAddress, editTextPortNumber, editTextLeds;
-    // shared preferences objects used to save the IP address and port so that the user doesn't have to
-    // type them next time he/she opens the app.
-    SharedPreferences.Editor editor;
-    SharedPreferences sharedPreferences;
-
-    //Array donde se guardan las imagenes
-    private ImageView m_aImagenes[];
-
-    //Total de leds
+    private TextView m_txtConf;
+    private SharedPreferences m_prefs;
+    private String m_sIP;
+    private int m_nPort;
     private int m_nLeds;
+    private int m_nPinInicial;
+    private boolean m_bMultiplesConex;
+    private boolean m_bEjecutando;
+    private ImageView m_aImagenes[] = new ImageView[MAX_LED];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        sharedPreferences = getSharedPreferences("HTTP_HELPER_PREFS",Context.MODE_PRIVATE);
-        editor = sharedPreferences.edit();
+        m_bEjecutando = false;
 
-        // assign text inputs
-        editTextIPAddress = (EditText)findViewById(R.id.editTextIPAddress);
-        editTextPortNumber = (EditText)findViewById(R.id.editTextPortNumber);
-        editTextLeds = (EditText)findViewById(R.id.editTextLeds);
+        //Botón configurar
+        Button btnConf = (Button) findViewById(R.id.btn_conf);
+        btnConf.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                //Muestro el Intent de las preferencias indicando que quiero respuesta.
+                Intent intent = new Intent(MainActivity.this, PrefsActivity.class);
+                startActivityForResult(intent, 0);
+            }
+        });
 
-        // get the IP address and port number from the last time the user used the app,
-        // put an empty string "" is this is the first time.
-        editTextIPAddress.setText(sharedPreferences.getString(PREF_IP, ""));
-        editTextPortNumber.setText(sharedPreferences.getString(PREF_PORT, ""));
-        editTextLeds.setText(sharedPreferences.getString(PREF_LEDS, ""));
+        //Parseo la configuración.
+        m_txtConf = (TextView)findViewById(R.id.direccionRemota);
+        m_prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+        parseaPreferencias();
+    }
 
-        String sLeds = editTextLeds.getText().toString().trim();
-        if (sLeds.length()>0)
-            m_nLeds = Integer.parseInt(sLeds);
-        else
-            m_nLeds = 3; //Valor por defecto
-
-
-        /*Añado dinámicamente un layot horizaontal con un botón y una imagen*/
-        m_aImagenes = new ImageView[MAX_LED];
-        for (int n = 0; n<m_nLeds; n++)
-            incorporaBotonLed(11 + n);
-
+    /*Nos avisa cuando se finalice el intent de preferencias*/
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        parseaPreferencias();
     }
 
 
+    public void parseaPreferencias() {
+        int nLeds = m_nLeds;
+        int nPinInicial = m_nPinInicial;
+
+        //Leo las preferencias
+        m_sIP = m_prefs.getString(PREF_IP, "");
+        m_nPort = Integer.parseInt(m_prefs.getString(PREF_PORT, "80"));
+        m_nPinInicial = Integer.parseInt(m_prefs.getString(PREF_MIN_PIN, "11"));
+        m_bMultiplesConex = m_prefs.getBoolean(PREF_MULTIPLE, false);
+        m_nLeds = Integer.parseInt(m_prefs.getString(PREF_LEDS, "3"));
+        if (m_nLeds>=(MAX_LED-m_nPinInicial))
+            m_nLeds = MAX_LED-m_nPinInicial-1;
+
+        //Pongo un literal indicando las preferencias
+        String strConf = "Dirección remota:" + m_sIP;
+        strConf += ":" + Integer.toString(m_nPort);
+        strConf += "\nPin inicial:" + Integer.toString(m_nPinInicial);
+        strConf += ", total leds:" + Integer.toString(m_nLeds);
+        m_txtConf.setText(strConf);
+
+        //Compruebo si se ha modificado el número de botones
+        if (nLeds!=m_nLeds || nPinInicial!=m_nPinInicial){
+            //Elimino los botones anteriores
+            LinearLayout ll = (LinearLayout) findViewById(R.id.layout_botones);
+            ll.removeAllViews();
+
+            //Añado dinámicamente un layot horizaontal con un botón y una imagen
+            for (int n = 0; n < m_nLeds; n++)
+                incorporaBotonLed(m_nPinInicial + n);
+        }
+
+        ponMensaje("");
+    }
+
+    /* Incorporo un layout con el botón y la imagen */
     public void incorporaBotonLed(int nPin) {
          /*Layout horizontal*/
         LinearLayout lHor = new LinearLayout(this);
         lHor.setOrientation(LinearLayout.HORIZONTAL);
         lHor.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        LinearLayout ll = (LinearLayout)findViewById(R.id.layout_general);
+        LinearLayout ll = (LinearLayout)findViewById(R.id.layout_botones);
         ll.addView(lHor);
 
         /*Boton*/
@@ -110,42 +142,53 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     @Override
     public void onClick(View view) {
-        // get the pin number
-        String parameterValue = "";
-        // get the ip address
-        String ipAddress = editTextIPAddress.getText().toString().trim();
-        // get the port number
-        String portNumber = editTextPortNumber.getText().toString().trim();
-        //Número de leds
-        String leds = editTextLeds.getText().toString().trim();
 
+        if (!m_bEjecutando) {
+            synchronized(this) {
+                m_bEjecutando = true;
 
-        // save the IP address and port for the next time the app is used
-        editor.putString(PREF_IP, ipAddress); // set the ip address value to save
-        editor.putString(PREF_PORT, portNumber); // set the port number to save
-        editor.putString(PREF_LEDS, leds); // Pongo el numero de leds
-        editor.commit(); // save the IP and PORT
+                //Si no se permiten múltiple conexiones deshabilito los botones
+                if (!m_bMultiplesConex) {
+                    for (int n = 0; n < m_nLeds; n++) {
+                        Button btn = (Button) findViewById(BUTTON_INDEX + m_nPinInicial + n);
+                        btn.setEnabled(false);
+                        btn.setClickable(false);
+                    }
+                }
 
-        parameterValue = Integer.toString(view.getId()-BUTTON_INDEX);
-        ponMensaje(parameterValue);
+                // get the pin number
+                String parameterValue = Integer.toString(view.getId() - BUTTON_INDEX);
 
-        // execute HTTP request
-        if(ipAddress.length()>0 && portNumber.length()>0) {
-            new HttpRequestAsyncTask(
-                    view.getContext(), parameterValue, ipAddress, portNumber, "pin"
-            ).execute();
+                // execute HTTP request
+                if (m_sIP.length() > 0 && m_nPort > 0) {
+                    new HttpRequestAsyncTask(
+                            view.getContext(), parameterValue, m_sIP, Integer.toString(m_nPort), "pin"
+                    ).execute();
+                }
+            }
+        } else {
+            Toast.makeText(getApplicationContext(), "Espere a que termine la petición anterior", Toast.LENGTH_SHORT).show();
         }
     }
 
     public void cambiaImagen(int nLed, String sEstado){
         if (nLed==0 || sEstado==null){
-            ponMensaje("La respuesta del servidor no es adecuada. Debe ser similar a 'pin12:ON'");
+            //ponMensaje("La respuesta del servidor no es adecuada. Debe ser similar a 'pin12:ON'");
         } else {
             int resImagenLed = getResources().getIdentifier(sEstado, "drawable", getPackageName());
             ImageView imgLed = m_aImagenes[nLed];
             imgLed.setImageResource(resImagenLed);
         }
 
+        //Habilito los botones
+        if (!m_bMultiplesConex) {
+            for (int n = 0; n < m_nLeds; n++) {
+                Button btn = (Button) findViewById(BUTTON_INDEX + m_nPinInicial + n);
+                btn.setEnabled(true);
+                btn.setClickable(true);
+            }
+        }
+        m_bEjecutando = false;
     }
 
     /**
@@ -154,7 +197,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
      * @param parameterValue the pin number to toggle
      * @param ipAddress the ip address to send the request to
      * @param portNumber the port number of the ip address
-     * @param parameterName
+     * @param parameterName Nombre del parametro a enviar
      * @return The ip address' reply text, or an ERROR message is it fails to receive one
      */
     public String sendRequest(String parameterValue, String ipAddress, String portNumber, String parameterName) throws IOException {
@@ -177,8 +220,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
             is = conn.getInputStream();
 
             // Convert the InputStream into a string
-            String contentAsString = readIt(is, len);
-            return contentAsString;
+            return readIt(is, len);
 
             // Makes sure that the InputStream is closed after the app is
             // finished using it.
@@ -193,7 +235,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     // Reads an InputStream and converts it to a String.
     public String readIt(InputStream stream, int len) throws IOException, UnsupportedEncodingException {
-        Reader reader = null;
+        Reader reader;
         reader = new InputStreamReader(stream, "UTF-8");
         char[] buffer = new char[len];
         reader.read(buffer);
@@ -206,7 +248,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
             t.setText(sMensaje);
         } catch (Exception e) {
             e.printStackTrace();
-            //02-10 10:59:49.217  29509-31503/es.fjaraba.arduinoled W/System.err﹕ android.view.ViewRootImpl$CalledFromWrongThreadException: Only the original thread that created a view hierarchy can touch its views.
         }
     }
 
@@ -245,8 +286,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         /**
          * Name: doInBackground
          * Description: Sends the request to the ip address
-         * @param voids
-         * @return
+         * @param voids parámetros
+         * @return retorno
          */
         @Override
         protected Void doInBackground(Void... voids) {
@@ -258,9 +299,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 /*Parseamos la respuesta*/
                 if (requestReply.contains(":")) {
                     String[] sParts = requestReply.split(":");
-                    String sPin = sParts[0].substring(3, 5);
-                    m_nLed = Integer.parseInt(sPin);
-                    m_sEstado = (sParts[1].substring(0,2).equals("ON"))?"on":"off";
+                    try {
+                        String sPin = sParts[0].substring(3, 5);
+                        m_nLed = Integer.parseInt(sPin);
+                        m_sEstado = (sParts[1].substring(0, 2).equals("ON")) ? "on" : "off";
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
 
             } catch (IOException e) {
