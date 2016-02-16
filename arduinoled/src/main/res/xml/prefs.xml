@@ -40,4 +40,16 @@
         android:summary="Permite realizar varias conexiones de manera simultánea."
         android:title="Conexiones simultáneas" />
 </PreferenceCategory>
+
+<PreferenceCategory
+        android:summary="Autor"
+        android:title="Autor" >
+    <Preference
+        android:selectable="false"
+        android:enabled="true"
+        android:key="about_key"
+        android:title="Programado por:"
+        android:summary="Fernando Jaraba Nieto. (Febrero 2016)\nGIT: https://github.com/fjaraba/arduinoled" />
+</PreferenceCategory>
+
 </PreferenceScreen>

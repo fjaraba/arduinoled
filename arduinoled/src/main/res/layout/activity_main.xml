@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    >
+    android:layout_height="fill_parent">
 
     <LinearLayout
         android:layout_width="fill_parent"
@@ -10,25 +9,70 @@
         android:orientation="vertical"
         android:id="@+id/layout_general">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Wifi Arduino. Fernando Jaraba Nieto."
-            android:textSize="20dp" />
+        <LinearLayout
+            android:orientation="horizontal"
+            android:paddingRight="10dp"
+            android:paddingTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Wifi Arduino.\nFernando Jaraba Nieto."
+                android:textSize="20dp"
+                android:gravity="center"
+                android:elegantTextHeight="false"
+                android:linksClickable="false"
+                android:singleLine="false"
+                android:layout_weight="3"
+                android:autoText="false" />
 
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Cambiar configuración"
-            android:id="@+id/btn_conf"
-            android:clickable="true"
-            android:enabled="true"
-            android:capitalize="none"
-            android:elegantTextHeight="true"
-            android:contentDescription="Cambiar la configuración"
-            android:focusable="true" />
+            <ImageView
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:maxHeight="1dp"
+                android:src="@drawable/fjaraba"
+                android:background="#000000"
+                android:padding="1dp"
+                android:adjustViewBounds="true" />
+        </LinearLayout>
+
+
+        <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="horizontal"
+        android:id="@+id/botones_menu">
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cambiar configuración"
+                android:id="@+id/btn_conf"
+                android:clickable="true"
+                android:enabled="true"
+                android:capitalize="none"
+                android:elegantTextHeight="true"
+                android:contentDescription="Cambiar la configuración"
+                android:focusable="true"
+                android:layout_weight="3"
+                style="@style/AlertDialog.AppCompat.Light" />
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Refrescar"
+                android:id="@+id/btn_refrescar"
+                android:clickable="true"
+                android:enabled="true"
+                android:capitalize="none"
+                android:elegantTextHeight="true"
+                android:contentDescription="Refrescar"
+                android:focusable="true"
+                android:layout_weight="1"
+                style="@style/AlertDialog.AppCompat.Light" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"

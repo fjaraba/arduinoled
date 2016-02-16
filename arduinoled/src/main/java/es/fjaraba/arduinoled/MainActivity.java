@@ -31,6 +31,8 @@ import java.net.URL;
     La aplicación recibe información del estado del LED del Arduino y muestra una imagen indicándolo.
     Tambien tiene incorpora una pantalla de configuración.
 
+    https://github.com/fjaraba/arduinoled
+
  */
 
 public class MainActivity extends Activity implements View.OnClickListener {
@@ -52,14 +54,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private int m_nPinInicial;
     private boolean m_bMultiplesConex;
     private boolean m_bEjecutando;
-    private ImageView m_aImagenes[] = new ImageView[MAX_LED];
+    private ImageView m_aImagenes[];
+
+    public MainActivity() {
+        m_aImagenes = new ImageView[MAX_LED];
+        m_bEjecutando = false;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        m_bEjecutando = false;
 
         //Botón configurar
         Button btnConf = (Button) findViewById(R.id.btn_conf);
@@ -68,6 +73,15 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 //Muestro el Intent de las preferencias indicando que quiero respuesta.
                 Intent intent = new Intent(MainActivity.this, PrefsActivity.class);
                 startActivityForResult(intent, 0);
+            }
+        });
+
+        //Botón refrescar
+        Button btnRefrescar = (Button) findViewById(R.id.btn_refrescar);
+        btnRefrescar.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                //Solicito al ESP8266 el estado de los leds del arduino
+                preguntaEstadoGlobal();
             }
         });
 
@@ -109,7 +123,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
             LinearLayout ll = (LinearLayout) findViewById(R.id.layout_botones);
             ll.removeAllViews();
 
-            //Añado dinámicamente un layot horizaontal con un botón y una imagen
+            //Añado dinámicamente tantos layout horizontales con botón e imagen
+            //como leds se quieran controlar
             for (int n = 0; n < m_nLeds; n++)
                 incorporaBotonLed(m_nPinInicial + n);
         }
@@ -140,55 +155,186 @@ public class MainActivity extends Activity implements View.OnClickListener {
         m_aImagenes[nPin]=imgLed;
     }
 
+    public void habilitaBotones(boolean bHabilitar){
+        m_bEjecutando = !bHabilitar;
+        if (!m_bMultiplesConex) {
+            for (int n = 0; n < m_nLeds; n++) {
+                Button btn = (Button) findViewById(BUTTON_INDEX + m_nPinInicial + n);
+                btn.setEnabled(bHabilitar);
+                btn.setClickable(bHabilitar);
+            }
+        }
+        Button btnRefrescar = (Button) findViewById(R.id.btn_refrescar);
+        btnRefrescar.setEnabled(bHabilitar);
+    }
+
     @Override
     public void onClick(View view) {
 
-        if (!m_bEjecutando) {
-            synchronized(this) {
-                m_bEjecutando = true;
+        synchronized(this) {
+            //Si no se permiten múltiple conexiones deshabilito los botones
+            habilitaBotones(false);
 
-                //Si no se permiten múltiple conexiones deshabilito los botones
-                if (!m_bMultiplesConex) {
-                    for (int n = 0; n < m_nLeds; n++) {
-                        Button btn = (Button) findViewById(BUTTON_INDEX + m_nPinInicial + n);
-                        btn.setEnabled(false);
-                        btn.setClickable(false);
-                    }
-                }
+            // get the pin number
+            String parameterValue = Integer.toString(view.getId() - BUTTON_INDEX);
 
-                // get the pin number
-                String parameterValue = Integer.toString(view.getId() - BUTTON_INDEX);
-
-                // execute HTTP request
-                if (m_sIP.length() > 0 && m_nPort > 0) {
-                    new HttpRequestAsyncTask(
-                            view.getContext(), parameterValue, m_sIP, Integer.toString(m_nPort), "pin"
-                    ).execute();
-                }
+            // execute HTTP request
+            if (m_sIP.length() > 0 && m_nPort > 0) {
+                new HttpRequestAsyncTask(
+                    view.getContext(), parameterValue, m_sIP, Integer.toString(m_nPort), "pin"
+                ).execute();
             }
-        } else {
-            Toast.makeText(getApplicationContext(), "Espere a que termine la petición anterior", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /*Hace una consulta del estado de todos los leds y los actualiza dependiendo la respuesta de la placa.*/
+    public void preguntaEstadoGlobal(){
+
+        habilitaBotones(false);
+
+        // Ejecto la petición
+        if (m_sIP.length() > 0 && m_nPort > 0) {
+            new HttpRequestAsyncTask(
+                    getApplicationContext(), Integer.toString(m_nPinInicial), m_sIP, Integer.toString(m_nPort), "global"
+            ).execute();
         }
     }
 
     public void cambiaImagen(int nLed, String sEstado){
         if (nLed==0 || sEstado==null){
             //ponMensaje("La respuesta del servidor no es adecuada. Debe ser similar a 'pin12:ON'");
+            int n = 0;
         } else {
             int resImagenLed = getResources().getIdentifier(sEstado, "drawable", getPackageName());
             ImageView imgLed = m_aImagenes[nLed];
             imgLed.setImageResource(resImagenLed);
         }
+    }
 
-        //Habilito los botones
-        if (!m_bMultiplesConex) {
-            for (int n = 0; n < m_nLeds; n++) {
-                Button btn = (Button) findViewById(BUTTON_INDEX + m_nPinInicial + n);
-                btn.setEnabled(true);
-                btn.setClickable(true);
+
+    void parseaLed(String str){
+        //Respuesta a un único Led: led11:on
+        String[] sParts = str.split(":");
+        String sPin = sParts[0].substring(3, 5);
+        int nLed = Integer.parseInt(sPin);
+        String sEstado = (sParts[1].substring(0, 2).equals("ON")) ? "on" : "off";
+        cambiaImagen(nLed, sEstado);
+    }
+
+    void parseaRespuestaHTTP(String requestReply){
+        try {
+            if (requestReply.contains("global&")) {
+                //Respuesta global: global&led11:on&led12:off&led13:on
+                String[] sParts = requestReply.split("&");
+                for (int n=1; n<sParts.length;n++){
+                    parseaLed(sParts[n]);
+                }
+            } else if (requestReply.contains(":")) {
+                //Respuesta a un único Led: led11:on
+                parseaLed(requestReply);
             }
+        } catch (Exception e){
+            e.printStackTrace();
+        } finally {
+            //Habilito los botones
+            habilitaBotones(true);
         }
-        m_bEjecutando = false;
+
+    }
+
+
+    public void ponMensaje(String sMensaje) {
+        try {
+            TextView t = (TextView) findViewById(R.id.info);
+            t.setText(sMensaje);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+    /**
+     * An AsyncTask is needed to execute HTTP requests in the background so that they do not
+     * block the user interface.
+     */
+    private class HttpRequestAsyncTask extends AsyncTask< Void, Void, Void> {
+
+        // declare variables needed
+        private String requestReply,ipAddress, portNumber;
+        private Context context;
+        private String parameter;
+        private String parameterValue;
+
+        /**
+         * Description: The asyncTask class constructor. Assigns the values used in its other methods.
+         * @param context the application context, needed to create the dialog
+         * @param parameterValue the pin number to toggle
+         * @param ipAddress the ip address to send the request to
+         * @param portNumber the port number of the ip address
+         */
+        public HttpRequestAsyncTask(Context context, String parameterValue, String ipAddress, String portNumber, String parameter)
+        {
+            this.context = context;
+            this.ipAddress = ipAddress;
+            this.parameterValue = parameterValue;
+            this.portNumber = portNumber;
+            this.parameter = parameter;
+        }
+
+
+        /**
+         * Name: doInBackground
+         * Description: Sends the request to the ip address
+         * @param voids parámetros
+         * @return retorno
+         */
+        @Override
+        protected Void doInBackground(Void... voids) {
+
+            ponMensaje("Datos enviados, esperando respuesta del servidor...");
+            try {
+                requestReply = sendRequest(parameterValue ,ipAddress, portNumber, parameter);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        /**
+         * Name: onPostExecute
+         * Description: This function is executed after the HTTP request returns from the ip address.
+         * The function sets the dialog's message with the reply text from the server and display the dialog
+         * if it's not displayed already (in case it was closed by accident);
+         * @param aVoid void parameter
+         */
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            ponMensaje("Respuesta del servidor: " + requestReply);
+            parseaRespuestaHTTP(requestReply);
+        }
+
+        /**
+         * Name: onPreExecute
+         * Description: This function is executed before the HTTP request is sent to ip address.
+         * The function will set the dialog's message and display the dialog.
+         */
+        @Override
+        protected void onPreExecute() {
+            ponMensaje("Enviando datos al servidor...");
+        }
+
+    }
+
+    // Reads an InputStream and converts it to a String.
+    public String readIt(InputStream stream, int len) throws IOException {
+        Reader reader;
+        reader = new InputStreamReader(stream, "UTF-8");
+        char[] buffer = new char[len];
+        reader.read(buffer);
+        return new String(buffer);
     }
 
     /**
@@ -228,114 +374,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
             if (is != null) {
                 is.close();
             }
-        }
-
-    }
-
-
-    // Reads an InputStream and converts it to a String.
-    public String readIt(InputStream stream, int len) throws IOException, UnsupportedEncodingException {
-        Reader reader;
-        reader = new InputStreamReader(stream, "UTF-8");
-        char[] buffer = new char[len];
-        reader.read(buffer);
-        return new String(buffer);
-    }
-
-    public void ponMensaje(String sMensaje) {
-        try {
-            TextView t = (TextView) findViewById(R.id.info);
-            t.setText(sMensaje);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    /**
-     * An AsyncTask is needed to execute HTTP requests in the background so that they do not
-     * block the user interface.
-     */
-    private class HttpRequestAsyncTask extends AsyncTask< Void, Void, Void> {
-
-        // declare variables needed
-        private String requestReply,ipAddress, portNumber;
-        private Context context;
-        private String parameter;
-        private String parameterValue;
-        private int    m_nLed;
-        private String m_sEstado;
-
-        /**
-         * Description: The asyncTask class constructor. Assigns the values used in its other methods.
-         * @param context the application context, needed to create the dialog
-         * @param parameterValue the pin number to toggle
-         * @param ipAddress the ip address to send the request to
-         * @param portNumber the port number of the ip address
-         */
-        public HttpRequestAsyncTask(Context context, String parameterValue, String ipAddress, String portNumber, String parameter)
-        {
-            this.context = context;
-            this.ipAddress = ipAddress;
-            this.parameterValue = parameterValue;
-            this.portNumber = portNumber;
-            this.parameter = parameter;
-        }
-
-
-        /**
-         * Name: doInBackground
-         * Description: Sends the request to the ip address
-         * @param voids parámetros
-         * @return retorno
-         */
-        @Override
-        protected Void doInBackground(Void... voids) {
-
-            ponMensaje("Datos enviados, esperando respuesta del servidor...");
-            try {
-                requestReply = sendRequest(parameterValue,ipAddress,portNumber, parameter);
-
-                /*Parseamos la respuesta*/
-                if (requestReply.contains(":")) {
-                    String[] sParts = requestReply.split(":");
-                    try {
-                        String sPin = sParts[0].substring(3, 5);
-                        m_nLed = Integer.parseInt(sPin);
-                        m_sEstado = (sParts[1].substring(0, 2).equals("ON")) ? "on" : "off";
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        /**
-         * Name: onPostExecute
-         * Description: This function is executed after the HTTP request returns from the ip address.
-         * The function sets the dialog's message with the reply text from the server and display the dialog
-         * if it's not displayed already (in case it was closed by accident);
-         * @param aVoid void parameter
-         */
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            ponMensaje("Respuesta del servidor: " + requestReply);
-
-            cambiaImagen(m_nLed, m_sEstado);
-        }
-
-        /**
-         * Name: onPreExecute
-         * Description: This function is executed before the HTTP request is sent to ip address.
-         * The function will set the dialog's message and display the dialog.
-         */
-        @Override
-        protected void onPreExecute() {
-            ponMensaje("Enviando datos al servidor...");
         }
 
     }
