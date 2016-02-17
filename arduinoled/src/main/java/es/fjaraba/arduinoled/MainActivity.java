@@ -7,20 +7,17 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -36,29 +33,32 @@ import java.net.URL;
  */
 
 public class MainActivity extends Activity implements View.OnClickListener {
-
+    //Strings de preferencias
     public final static String PREF_IP       = "PREF_IP_ADDRESS";
     public final static String PREF_PORT     = "PREF_PORT_NUMBER";
     public final static String PREF_LEDS     = "PREF_LEDS";
     public final static String PREF_MIN_PIN  = "PREF_MIN_PIN";
     public final static String PREF_MULTIPLE = "PREF_MULTIPLE";
 
-    public final static int MAX_LED = 20;
-    public final static int BUTTON_INDEX = 2000;
-
-    private TextView m_txtConf;
+    //Preferencias
     private SharedPreferences m_prefs;
     private String m_sIP;
     private int m_nPort;
     private int m_nLeds;
     private int m_nPinInicial;
     private boolean m_bMultiplesConex;
-    private boolean m_bEjecutando;
+
+    //Constantes
+    public final static int MAX_LED = 20;
+    public final static int BUTTON_INDEX = 2000;
+
+
+    private TextView m_txtConf;
     private ImageView m_aImagenes[];
 
     public MainActivity() {
+        //Inicializo las variables miembro
         m_aImagenes = new ImageView[MAX_LED];
-        m_bEjecutando = false;
     }
 
     @Override
@@ -66,36 +66,56 @@ public class MainActivity extends Activity implements View.OnClickListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Botón configurar
-        Button btnConf = (Button) findViewById(R.id.btn_conf);
-        btnConf.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                //Muestro el Intent de las preferencias indicando que quiero respuesta.
-                Intent intent = new Intent(MainActivity.this, PrefsActivity.class);
-                startActivityForResult(intent, 0);
-            }
-        });
-
-        //Botón refrescar
-        Button btnRefrescar = (Button) findViewById(R.id.btn_refrescar);
-        btnRefrescar.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                //Solicito al ESP8266 el estado de los leds del arduino
-                preguntaEstadoGlobal();
-            }
-        });
-
         //Parseo la configuración.
         m_txtConf = (TextView)findViewById(R.id.direccionRemota);
         m_prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
         parseaPreferencias();
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+        //Inflo el XML con el menú
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    /*
+    @Override
+    public boolean onMenuOpened(int featureId, Menu menu) {
+        //Permite mostrar/ocutal elementos del menu
+    }
+    */
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.about: {
+                //ShowAbout();
+                return true;
+            }
+            case R.id.refrescar: {
+                //Solicito al ESP8266 el estado de los leds del arduino
+                preguntaEstadoGlobal();
+                return true;
+            }
+            case R.id.configuracion: {
+                //Muestro el Intent de las preferencias indicando que quiero respuesta.
+                Intent intent = new Intent(MainActivity.this, PrefsActivity.class);
+                startActivityForResult(intent, 0);
+                return true;
+            }
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
     /*Nos avisa cuando se finalice el intent de preferencias*/
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         parseaPreferencias();
     }
-
 
     public void parseaPreferencias() {
         int nLeds = m_nLeds;
@@ -110,11 +130,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         if (m_nLeds>=(MAX_LED-m_nPinInicial))
             m_nLeds = MAX_LED-m_nPinInicial-1;
 
-        //Pongo un literal indicando las preferencias
+        //Pongo un literal indicando las preferencias seleccionadas
         String strConf = "Dirección remota:" + m_sIP;
         strConf += ":" + Integer.toString(m_nPort);
-        strConf += "\nPin inicial:" + Integer.toString(m_nPinInicial);
-        strConf += ", total leds:" + Integer.toString(m_nLeds);
+        //strConf += "\nPin inicial:" + Integer.toString(m_nPinInicial);
+        //strConf += ", total leds:" + Integer.toString(m_nLeds);
         m_txtConf.setText(strConf);
 
         //Compruebo si se ha modificado el número de botones
@@ -156,16 +176,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     public void habilitaBotones(boolean bHabilitar){
-        m_bEjecutando = !bHabilitar;
         if (!m_bMultiplesConex) {
+            //Botones de los leds
             for (int n = 0; n < m_nLeds; n++) {
                 Button btn = (Button) findViewById(BUTTON_INDEX + m_nPinInicial + n);
                 btn.setEnabled(bHabilitar);
                 btn.setClickable(bHabilitar);
             }
+            //Botón refrescar
+            /*Button btnRefrescar = (Button) findViewById(R.id.btn_refrescar);
+            btnRefrescar.setEnabled(bHabilitar);*/
         }
-        Button btnRefrescar = (Button) findViewById(R.id.btn_refrescar);
-        btnRefrescar.setEnabled(bHabilitar);
     }
 
     @Override
@@ -175,10 +196,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
             //Si no se permiten múltiple conexiones deshabilito los botones
             habilitaBotones(false);
 
-            // get the pin number
+            // Obtengo el número del PIN
             String parameterValue = Integer.toString(view.getId() - BUTTON_INDEX);
 
-            // execute HTTP request
+            // Ejecuto la petición
             if (m_sIP.length() > 0 && m_nPort > 0) {
                 new HttpRequestAsyncTask(
                     view.getContext(), parameterValue, m_sIP, Integer.toString(m_nPort), "pin"
@@ -189,10 +210,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     /*Hace una consulta del estado de todos los leds y los actualiza dependiendo la respuesta de la placa.*/
     public void preguntaEstadoGlobal(){
-
         habilitaBotones(false);
 
-        // Ejecto la petición
+        // Ejecuto la petición
         if (m_sIP.length() > 0 && m_nPort > 0) {
             new HttpRequestAsyncTask(
                     getApplicationContext(), Integer.toString(m_nPinInicial), m_sIP, Integer.toString(m_nPort), "global"
@@ -201,19 +221,15 @@ public class MainActivity extends Activity implements View.OnClickListener {
     }
 
     public void cambiaImagen(int nLed, String sEstado){
-        if (nLed==0 || sEstado==null){
-            //ponMensaje("La respuesta del servidor no es adecuada. Debe ser similar a 'pin12:ON'");
-            int n = 0;
-        } else {
+        if ((nLed!=0) && !(sEstado==null)){
             int resImagenLed = getResources().getIdentifier(sEstado, "drawable", getPackageName());
             ImageView imgLed = m_aImagenes[nLed];
             imgLed.setImageResource(resImagenLed);
         }
     }
 
-
     void parseaLed(String str){
-        //Respuesta a un único Led: led11:on
+        //Respuesta a un único Led. Ej: led11:on
         String[] sParts = str.split(":");
         String sPin = sParts[0].substring(3, 5);
         int nLed = Integer.parseInt(sPin);
@@ -224,13 +240,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
     void parseaRespuestaHTTP(String requestReply){
         try {
             if (requestReply.contains("global&")) {
-                //Respuesta global: global&led11:on&led12:off&led13:on
+                //Respuesta global. Ej: global&led11:on&led12:off&led13:on
                 String[] sParts = requestReply.split("&");
                 for (int n=1; n<sParts.length;n++){
                     parseaLed(sParts[n]);
                 }
             } else if (requestReply.contains(":")) {
-                //Respuesta a un único Led: led11:on
+                //Respuesta a un único Led. Ej: led11:on
                 parseaLed(requestReply);
             }
         } catch (Exception e){
@@ -306,8 +322,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         /**
          * Name: onPostExecute
          * Description: This function is executed after the HTTP request returns from the ip address.
-         * The function sets the dialog's message with the reply text from the server and display the dialog
-         * if it's not displayed already (in case it was closed by accident);
          * @param aVoid void parameter
          */
         @Override
@@ -328,14 +342,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     }
 
-    // Reads an InputStream and converts it to a String.
-    public String readIt(InputStream stream, int len) throws IOException {
-        Reader reader;
-        reader = new InputStreamReader(stream, "UTF-8");
-        char[] buffer = new char[len];
-        reader.read(buffer);
-        return new String(buffer);
-    }
 
     /**
      * Description: Send an HTTP Get request to a specified ip address and port.
@@ -349,10 +355,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
     public String sendRequest(String parameterValue, String ipAddress, String portNumber, String parameterName) throws IOException {
         InputStream is =null;
 
-        // Only display the first 500 characters of the retrieved
-        // web page content.
-        int len = 500;
-
         try {
             URL url = new URL("http://"+ipAddress+":"+portNumber+"/?"+parameterName+"="+parameterValue);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -365,11 +367,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
             int response = conn.getResponseCode();
             is = conn.getInputStream();
 
-            // Convert the InputStream into a string
-            return readIt(is, len);
+            // Paso los datos del InputStream a un String
+            java.util.Scanner s = new java.util.Scanner(is);
+            String str = s.useDelimiter("\\A").hasNext() ? s.next(): "";
+            s.close();
+            return str;
 
-            // Makes sure that the InputStream is closed after the app is
-            // finished using it.
+            // Makes sure that the InputStream is closed after the app is finished using it.
         } finally {
             if (is != null) {
                 is.close();
