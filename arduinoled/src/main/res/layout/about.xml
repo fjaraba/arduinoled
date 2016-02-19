@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_marginTop="20dp"
+        android:text="Wifi Arduino.\nFernando Jaraba Nieto."
+        android:textSize="20dp"
+        android:gravity="center"
+        android:elegantTextHeight="false"
+        android:linksClickable="false"
+        android:singleLine="false"
+        android:layout_weight="3"
+        android:autoText="false" />
+
+
+    <ImageView
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:maxHeight="1dp"
+        android:src="@drawable/fjaraba"
+        android:layout_gravity="center"
+        android:background="#000000"
+        android:padding="1dp"
+        android:adjustViewBounds="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Programado por Fernando Jaraba Nieto." />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:autoLink="all"
+        android:text="Si tienes alguna sugerencia o quieres contactarme por cualquier motivo puedes enviarme un correo a fjaraba@gmail.com" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:autoLink="all"
+        android:text="Puedes descargarte el fuente del programa en GITHUB:\nhttps://github.com/fjaraba/arduinoled" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_gravity="center"
+        android:text="Volver"
+
+        android:id="@+id/btn_volver"
+        android:enabled="true"
+        android:onClick="onClick" />
+
+</LinearLayout>
+</ScrollView>

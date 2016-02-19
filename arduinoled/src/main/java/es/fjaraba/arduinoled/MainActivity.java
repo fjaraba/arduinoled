@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -34,11 +35,13 @@ import java.net.URL;
 
 public class MainActivity extends Activity implements View.OnClickListener {
     //Strings de preferencias
-    public final static String PREF_IP       = "PREF_IP_ADDRESS";
-    public final static String PREF_PORT     = "PREF_PORT_NUMBER";
-    public final static String PREF_LEDS     = "PREF_LEDS";
-    public final static String PREF_MIN_PIN  = "PREF_MIN_PIN";
-    public final static String PREF_MULTIPLE = "PREF_MULTIPLE";
+    public final static String PREF_IP              = "PREF_IP_ADDRESS";
+    public final static String PREF_PORT            = "PREF_PORT_NUMBER";
+    public final static String PREF_LEDS            = "PREF_LEDS";
+    public final static String PREF_MIN_PIN         = "PREF_MIN_PIN";
+    public final static String PREF_MULTIPLE        = "PREF_MULTIPLE";
+    public final static String PREF_PIN_TEMPERATURA = "PREF_PIN_TEMPERATURA";
+
 
     //Preferencias
     private SharedPreferences m_prefs;
@@ -47,6 +50,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private int m_nLeds;
     private int m_nPinInicial;
     private boolean m_bMultiplesConex;
+    private int m_nSensorTemperatura;
+    private TextView m_tvTemperatura;
 
     //Constantes
     public final static int MAX_LED = 20;
@@ -59,12 +64,15 @@ public class MainActivity extends Activity implements View.OnClickListener {
     public MainActivity() {
         //Inicializo las variables miembro
         m_aImagenes = new ImageView[MAX_LED];
+
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        m_tvTemperatura = new TextView(MainActivity.this);
 
         //Parseo la configuración.
         m_txtConf = (TextView)findViewById(R.id.direccionRemota);
@@ -93,7 +101,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.about: {
-                //ShowAbout();
+                //Muestro el Intent de About
+                Intent intent = new Intent(MainActivity.this, AboutActivity.class);
+                startActivity(intent);
                 return true;
             }
             case R.id.refrescar: {
@@ -129,6 +139,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         m_nLeds = Integer.parseInt(m_prefs.getString(PREF_LEDS, "3"));
         if (m_nLeds>=(MAX_LED-m_nPinInicial))
             m_nLeds = MAX_LED-m_nPinInicial-1;
+        m_nSensorTemperatura = Integer.parseInt(m_prefs.getString(PREF_PIN_TEMPERATURA, "0"));
 
         //Pongo un literal indicando las preferencias seleccionadas
         String strConf = "Dirección remota:" + m_sIP;
@@ -149,11 +160,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 incorporaBotonLed(m_nPinInicial + n);
         }
 
+/*        if (m_nSensorTemperatura!=0){
+            incorporaBotonLed(m_nSensorTemperatura);
+        }
+*/
         ponMensaje("");
     }
 
     /* Incorporo un layout con el botón y la imagen */
+    /* Si nPin = m_nSensorTemperatura entonces se pinta el botón de temperatura */
     public void incorporaBotonLed(int nPin) {
+        int nResId;
+
          /*Layout horizontal*/
         LinearLayout lHor = new LinearLayout(this);
         lHor.setOrientation(LinearLayout.HORIZONTAL);
@@ -163,16 +181,35 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         /*Boton*/
         Button btnLed = new Button(this);
-        btnLed.setText("Pin " + Integer.toString(nPin));
         btnLed.setOnClickListener(this);
+        if (nPin==m_nSensorTemperatura){
+            //Sensor de temperatura
+            btnLed.setText("Sensor de temperatura (Pin:" + Integer.toString(m_nSensorTemperatura) + ")");
+        } else {
+            //Led
+            btnLed.setText("Pin " + Integer.toString(nPin));
+        }
         btnLed.setId(BUTTON_INDEX + nPin);
         lHor.addView(btnLed, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
         /*Imagen*/
-        ImageView imgLed = new ImageView(MainActivity.this);
-        imgLed.setImageResource(R.drawable.off);
-        lHor.addView(imgLed, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT, 3));
-        m_aImagenes[nPin]=imgLed;
+
+        if (nPin==m_nSensorTemperatura){
+            //Sensor de temperatura
+            //nResId = R.drawable.termometro;
+            lHor.addView(m_tvTemperatura, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT, 3));
+            m_tvTemperatura.setText("?");
+            m_tvTemperatura.setGravity(Gravity.CENTER);
+            m_tvTemperatura.setTextSize(20);
+           // m_aImagenes[nPin]=m_tvTemperatura;
+        } else {
+            //Led
+            ImageView imgLed = new ImageView(MainActivity.this);
+            nResId = R.drawable.off;
+            imgLed.setImageResource(nResId);
+            lHor.addView(imgLed, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT, 3));
+            m_aImagenes[nPin]=imgLed;
+        }
     }
 
     public void habilitaBotones(boolean bHabilitar){
@@ -189,20 +226,38 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
+
+    public void onClickImagen(View view) {
+        //Muestro el Intent de About
+        Intent intent = new Intent(MainActivity.this, AboutActivity.class);
+        startActivity(intent);
+    }
+
     @Override
     public void onClick(View view) {
-
+        String strParametro;
         synchronized(this) {
             //Si no se permiten múltiple conexiones deshabilito los botones
             habilitaBotones(false);
 
+
+
             // Obtengo el número del PIN
             String parameterValue = Integer.toString(view.getId() - BUTTON_INDEX);
+
+            if (Integer.parseInt(parameterValue)==m_nSensorTemperatura){
+                //Temperstura
+                strParametro = "tem";
+            }
+            else{
+                //Leds
+                strParametro = "pin";
+            }
 
             // Ejecuto la petición
             if (m_sIP.length() > 0 && m_nPort > 0) {
                 new HttpRequestAsyncTask(
-                    view.getContext(), parameterValue, m_sIP, Integer.toString(m_nPort), "pin"
+                    view.getContext(), parameterValue, m_sIP, Integer.toString(m_nPort), strParametro
                 ).execute();
             }
         }
@@ -228,13 +283,27 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
+    public void ponTemperatura(int nLed, String sEstado){
+        if ((nLed!=0) && !(sEstado==null)){
+            m_tvTemperatura.setText(sEstado);
+        }
+    }
+
+
+
     void parseaLed(String str){
         //Respuesta a un único Led. Ej: led11:on
         String[] sParts = str.split(":");
         String sPin = sParts[0].substring(3, 5);
         int nLed = Integer.parseInt(sPin);
-        String sEstado = (sParts[1].substring(0, 2).equals("ON")) ? "on" : "off";
-        cambiaImagen(nLed, sEstado);
+        if (nLed==m_nSensorTemperatura){
+            //Temperatura
+            ponTemperatura(nLed, sParts[1]);
+        } else{
+            //Led
+            String sEstado = (sParts[1].substring(0, 2).equals("ON")) ? "on" : "off";
+            cambiaImagen(nLed, sEstado);
+        }
     }
 
     void parseaRespuestaHTTP(String requestReply){

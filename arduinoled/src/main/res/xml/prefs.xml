@@ -34,6 +34,13 @@
         android:summary="Indica el numero de leds a controlar."
         android:title="Número de Leds" />
 
+    <EditTextPreference
+        android:key="PREF_PIN_TEMPERATURA"
+        android:defaultValue="0"
+        android:inputType="number"
+        android:summary="Indica el pin en el que esta conectado el sensor de temperatura (0 si no hay)."
+        android:title="Sensor de temperatura" />
+
     <CheckBoxPreference
         android:key="PREF_MULTIPLE"
         android:defaultValue="false"
@@ -49,7 +56,7 @@
         android:enabled="true"
         android:key="about_key"
         android:title="Programado por:"
-        android:summary="Fernando Jaraba Nieto. (Febrero 2016)\nGIT: https://github.com/fjaraba/arduinoled" />
+        android:summary="Fernando Jaraba Nieto. (Febrero 2016)\nGIT: https://github.com/fjaraba/arduinoled\nfjaraba@gmail.com" />
 </PreferenceCategory>
 
 </PreferenceScreen>
