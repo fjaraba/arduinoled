@@ -48,6 +48,40 @@
         android:title="Conexiones simultáneas" />
 </PreferenceCategory>
 
+
+    <PreferenceCategory
+        android:summary="Configuración Bluetooth"
+        android:title="Configuración Bluetooth" >
+
+        <EditTextPreference
+            android:key="PREF_BLUTOOTH"
+            android:defaultValue="11"
+            android:inputType="number"
+            android:summary="Bluetooth"
+            android:title="Bluetooth" />
+
+        <EditTextPreference
+            android:key="PREF_LEDS"
+            android:defaultValue="3"
+            android:inputType="number"
+            android:summary="Indica el numero de leds a controlar."
+            android:title="Número de Leds" />
+
+        <EditTextPreference
+            android:key="PREF_PIN_TEMPERATURA"
+            android:defaultValue="0"
+            android:inputType="number"
+            android:summary="Indica el pin en el que esta conectado el sensor de temperatura (0 si no hay)."
+            android:title="Sensor de temperatura" />
+
+        <CheckBoxPreference
+            android:key="PREF_MULTIPLE"
+            android:defaultValue="false"
+            android:summary="Permite realizar varias conexiones de manera simultánea."
+            android:title="Conexiones simultáneas" />
+    </PreferenceCategory>
+
+
 <PreferenceCategory
         android:summary="Autor"
         android:title="Autor" >
